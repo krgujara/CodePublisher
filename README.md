@@ -18,7 +18,7 @@ For each class, we will, optionally, implement outlining, similar to the visual 
 The Code Publisher will be embedded in a mock Repository with almost no functionality except to support publishing of source code as web pages. Specifically you are not expected to provide support for:
 
 package checkin or checkout
-versioning
+versioning 
 You are expected to support:
 
 Dependency analysis of the C++ source code files you will publish, using the analyzer you developed in CodeAnalyzer Project.
