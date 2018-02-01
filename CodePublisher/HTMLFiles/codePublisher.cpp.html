@@ -1,0 +1,179 @@
+<html><head><link rel = "stylesheet" type = "text/css" href = "../StylesAndScripts/style.css"><script type = "text/javascript" src = "../StylesAndScripts/script.js"></script></head><body><h3>C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\CodePublisher\codePublisher.cpp</h3><hr/><div class = "indent"><h4>Dependencies:</h4><a href = "../HTMLFiles/codePublisher.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\CodePublisher\codePublisher.h</a><br><a href = "../HTMLFiles/DepAnal.cpp.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.cpp</a><br><a href = "../HTMLFiles/DepAnal.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.h</a><br><a href = "../HTMLFiles/Tokenizer.cpp.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.cpp</a><br><a href = "../HTMLFiles/Tokenizer.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.h</a><br></div><hr/><pre>/////////////////////////////////////////////////////////////// 
+ // CodePublisher.cpp - Package to convert the Cpp files      //   
+ //to HTMl pages to publish                                   //  
+ //                                                           // 
+ // Language:    Visual C++ 2015                              // 
+ // Platform:    Windows 10 Macbook                           // 
+ // Author:      Komal Gujarathi, Syracuse University         // 
+ //              (315) 744 6116, krgujara@syr.edu             // 
+ /////////////////////////////////////////////////////////////// 
+ 
+ # include "codePublisher.h" 
+ # include "../Analyzer/Executive.h" 
+ # include &lt;fstream &gt;
+ # include &lt;iostream &gt;
+ # include &lt;set &gt;
+ # include &lt;unordered_map &gt;
+ # include "../Tokenizer/Tokenizer.h" 
+ # include "../DepAnal/DepAnal.h" 
+ # include "../TypeTable/TypeTable.h" 
+ 
+ //function to convert .Cpp files to .Html files 
+ void CodePublisher :: convertCppToHtml ( std :: string file , std :: set &lt;std :: string &gt;dependencies ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText8'); ">+</a><div id = "toggleText8" style = "display: none">static int id = 0 ; 
+ std :: string fileName ; 
+ std :: ifstream sourceFile ( file ) ; 
+ if ( sourceFile . is_open ( ) ) { <a id = "displayText" href = "javascript:toggle('toggleText9'); ">+</a><div id = "toggleText9" style = "display: none">std :: string path = "../HTMLFiles/" ; //forming the path to store HTML files 
+ std :: size_t found = file . rfind ( "\\" ) ; 
+ if ( found != std :: string :: npos ) 
+ for ( size_t i = found + 1 ; i &lt;file . length ( ) ; i ++ ) fileName += file [ i ] ; 
+ path . append ( fileName ) ; 
+ fileName . clear ( ) ; 
+ path . append ( ".html" ) ; 
+ std :: ofstream HTMLfile ( path ) ; 
+ if ( HTMLfile . is_open ( ) ) { <a id = "displayText" href = "javascript:toggle('toggleText10'); ">+</a><div id = "toggleText10" style = "display: none">std :: string htmlFileContents ; 
+ htmlFileContents . append ( "<html><head><link rel = \"stylesheet\" type = \"text/css\" href = \"../StylesAndScripts/style.css\">" ) ; 
+ htmlFileContents . append ( "<script type = \"text/javascript\" src = \"../StylesAndScripts/script.js\"></script></head><body><h3>" ) ; 
+ htmlFileContents . append ( file ) ; 
+ htmlFileContents . append ( "</h3><hr/><div class = \"indent\"><h4>Dependencies:</h4>" ) ; 
+ for ( auto it = dependencies . begin ( ) ; it != dependencies . end ( ) ; it ++ ) { <a id = "displayText" href = "javascript:toggle('toggleText11'); ">+</a><div id = "toggleText11" style = "display: none">
+ std :: string path = "../HTMLFiles/" ; //forming the path to store HTML files 
+ std :: size_t found = ( * it ) . rfind ( "\\" ) ; 
+ fileName = "" ; 
+ if ( found != std :: string :: npos ) 
+ for ( size_t i = found + 1 ; i &lt;( * it ) . length ( ) ; i ++ ) fileName += ( * it ) [ i ] ; 
+ path . append ( fileName + ".html" ) ; //creating the HTML path corresponding to each dependant file 
+ htmlFileContents . append ( "<a href = \"" ) ; 
+ htmlFileContents . append ( path ) ; 
+ htmlFileContents . append ( "\"> " + ( * it ) + "</a><br>" ) ;  </div>} 
+ htmlFileContents . append ( "</div><hr/><pre>" ) ; 
+ Scanner :: Toker toker ; 
+ toker . returnComments ( ) ; 
+ toker . attach ( & sourceFile ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText12'); ">+</a><div id = "toggleText12" style = "display: none">std :: string tok = toker . getTok ( ) ; 
+ if ( tok == "}" ) htmlFileContents . append ( " </div>" ) ; //this is required for collapse expand 
+ if ( tok == "<" ) htmlFileContents . append ( "&lt;" ) ; //replace < with &lt; as HTMLparser cannt process < > signs 
+ else if ( tok == ">" ) htmlFileContents . append ( "&gt;" ) ; //replaces > with &gt; 
+ else htmlFileContents . append ( tok + " " ) ; 
+ if ( tok == "{" ) { <a id = "displayText" href = "javascript:toggle('toggleText13'); ">+</a><div id = "toggleText13" style = "display: none">
+ std :: string toggle = "toggleText" + std :: to_string ( id ++ ) ; 
+ htmlFileContents . append ( "<a id = \"displayText\" href = \"javascript:toggle(" ) ; 
+ htmlFileContents . append ( "'" + toggle + "'" ) ; 
+ htmlFileContents . append ( "); \">+</a><div id = \"" ) ; 
+ htmlFileContents . append ( toggle + "\" style = \"display: none\">" ) ;  </div>} 
+  </div>} while ( sourceFile . good ( ) ) ; 
+ htmlFileContents . append ( "</pre></body></html>" ) ; 
+ HTMLfile << htmlFileContents ; 
+ HTMLfile . close ( ) ; 
+  </div>} else std :: cout << "\nCannot open the HTML File" ; 
+ sourceFile . close ( ) ; 
+  </div>} else std :: cout << "Unable to open files" ; 
+  </div>} 
+ 
+ //function to convert to each file into corresponding html files along wiht insertion of dependencies  
+ void CodePublisher :: processFiles ( std :: unordered_map &lt;std :: string , std :: vector &lt;std :: string >> fm , std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> dependencies ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText14'); ">+</a><div id = "toggleText14" style = "display: none">
+ for ( auto it = fm . begin ( ) ; it != fm . end ( ) ; it ++ ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText15'); ">+</a><div id = "toggleText15" style = "display: none">
+ std :: cout << " " ; 
+ for ( auto it2 = it - &gt;second . begin ( ) ; it2 != it - &gt;second . end ( ) ; it2 ++ ) { <a id = "displayText" href = "javascript:toggle('toggleText16'); ">+</a><div id = "toggleText16" style = "display: none">
+ std :: set &lt;std :: string &gt;dependsOn ; 
+ dependsOn = dependencies [ * it2 ] ; 
+ 
+ convertCppToHtml ( * it2 , dependsOn ) ; 
+  </div>} 
+  </div>} 
+  </div>} 
+ 
+ //funciton to create the start up (index ) page for set of files  
+ void CodePublisher :: createRepository ( std :: unordered_map &lt;std :: string , std :: vector &lt;std :: string >> fm , std :: string path ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText17'); ">+</a><div id = "toggleText17" style = "display: none">
+ std :: string contents = "" ; 
+ std :: ofstream HTMLfile ( path ) ; 
+ if ( HTMLfile . is_open ( ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText18'); ">+</a><div id = "toggleText18" style = "display: none">
+ contents . append ( "<html><head><style>h2: {color: red;}</style></head><body><center><H2>Code Publisher</H2></center><div><hr>" ) ; 
+ for ( auto it = fm . begin ( ) ; it != fm . end ( ) ; it ++ ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText19'); ">+</a><div id = "toggleText19" style = "display: none">
+ for ( auto it2 = it - &gt;second . begin ( ) ; it2 != it - &gt;second . end ( ) ; it2 ++ ) { <a id = "displayText" href = "javascript:toggle('toggleText20'); ">+</a><div id = "toggleText20" style = "display: none">
+ contents . append ( "<a href =\"" ) ; 
+ 
+ std :: string fileName = "" ; 
+ std :: string path = "../HTMLFiles/" ; //forming the path to store links to all HTML files 
+ std :: size_t found = ( * it2 ) . rfind ( "\\" ) ; 
+ if ( found != std :: string :: npos ) 
+ for ( size_t i = found + 1 ; i &lt;( * it2 ) . length ( ) ; i ++ ) 
+ fileName += ( * it2 ) [ i ] ; 
+ path . append ( fileName ) ; 
+ path . append ( ".html" ) ; 
+ 
+ contents . append ( path ) ; 
+ contents . append ( "\">" ) ; 
+ contents . append ( fileName ) ; 
+ contents . append ( "</a><br>" ) ; 
+ fileName . clear ( ) ; 
+ 
+  </div>} 
+  </div>} 
+ contents . append ( "</body></html>" ) ; 
+ HTMLfile << contents ; 
+ 
+ HTMLfile . close ( ) ; 
+  </div>} 
+ else 
+ { <a id = "displayText" href = "javascript:toggle('toggleText21'); ">+</a><div id = "toggleText21" style = "display: none">
+ std :: cout << "\nCannot open file " ; 
+  </div>} 
+  </div>} 
+ 
+ 
+ # ifdef CODE_PUBLISHER 
+ int main ( int argc , char * argv [ ] ) { <a id = "displayText" href = "javascript:toggle('toggleText22'); ">+</a><div id = "toggleText22" style = "display: none">
+ 
+ std :: string line ; 
+ CodeAnalysis :: CodeAnalysisExecutive exec ; 
+ using Files = std :: unordered_map &lt;std :: string , std :: vector &lt;std :: string >> ; 
+ using DepStore = std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> ; 
+ 
+ try { <a id = "displayText" href = "javascript:toggle('toggleText23'); ">+</a><div id = "toggleText23" style = "display: none">
+ bool succeeded = exec . ProcessCommandLine ( argc , argv ) ; 
+ if ( ! succeeded ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText24'); ">+</a><div id = "toggleText24" style = "display: none">
+ return 1 ; 
+  </div>} 
+ exec . getSourceFiles ( ) ; 
+ exec . processSourceCode ( true ) ; 
+ Files fm = exec . getFileMap ( ) ; 
+ 
+ CodePublisher publisher ; 
+ 
+ 
+ TypeTable tt ; 
+ tt . createTypeTable ( ) ; 
+ //std::cout << "\nType tabe Created\n"; 
+ Store typeTable = tt . getTypeTable ( ) ; 
+ 
+ DepAnal danal ; 
+ //FileMap files = exec.getFileMap(); 
+ danal . tokenizeForDependencies ( fm , typeTable ) ; 
+ //danal.displayDependencies(); 
+ DepStore dependencies = danal . getDependencies ( ) ; 
+ 
+ publisher . processFiles ( fm , dependencies ) ; 
+ 
+ 
+  </div>} 
+ catch ( std :: exception & except ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText25'); ">+</a><div id = "toggleText25" style = "display: none">
+ exec . flushLogger ( ) ; 
+ std :: cout << "\n\n  caught exception in Executive::main: " + std :: string ( except . what ( ) ) + "\n\n" ; 
+ exec . stopLogger ( ) ; 
+ return 1 ; 
+  </div>} 
+ return 0 ; 
+  </div>} 
+ 
+ # endif 
+ 
+ 
+ </pre></body></html>

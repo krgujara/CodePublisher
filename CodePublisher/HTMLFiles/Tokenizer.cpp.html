@@ -1,0 +1,684 @@
+<html><head><link rel = "stylesheet" type = "text/css" href = "../StylesAndScripts/style.css"><script type = "text/javascript" src = "../StylesAndScripts/script.js"></script></head><body><h3>C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.cpp</h3><hr/><div class = "indent"><h4>Dependencies:</h4><a href = "../HTMLFiles/Tokenizer.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.h</a><br></div><hr/><pre>///////////////////////////////////////////////////////////////////// 
+ // Tokenizer.cpp - read words from a std::stream                   // 
+ // ver 4.1                                                         // 
+ // Language:    C++, Visual Studio 2015                            // 
+ // Platform:    Dell XPS 8900, Windows 10                          // 
+ // Application: Parser component, CSE687 - Object Oriented Design  // 
+ // Author:      Jim Fawcett, Syracuse University, CST 4-187        // 
+ //              jfawcett@twcny.rr.com                              // 
+ ///////////////////////////////////////////////////////////////////// 
+ 
+ # include &lt;iostream &gt;
+ # include &lt;cctype &gt;
+ # include &lt;string &gt;
+ # include &lt;vector &gt;
+ # include "Tokenizer.h" 
+ # include "..\Utilities\Utilities.h" 
+ 
+ namespace Scanner 
+ { <a id = "displayText" href = "javascript:toggle('toggleText45'); ">+</a><div id = "toggleText45" style = "display: none">
+ 
+ 
+ void nonGlobal ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText46'); ">+</a><div id = "toggleText46" style = "display: none">
+ std :: cout << "Non global function" ; 
+  </div>} 
+ /////////////////////////////////////////////////////////////////// 
+ // Context is a shared data storage facility. 
+ /*
+   * - with Context we don't need static members to share
+   *   state pointes etc.  Context holds and shares all that.
+   * - Context is an entirely private facility used by ConsumeState
+   *   and its derived instances, so there is no need for encapsulation
+   *   and we use a struct.  This won't be appropriate if we handed
+   *   the context to clients of Toker.
+   */ 
+ struct Context 
+ { <a id = "displayText" href = "javascript:toggle('toggleText47'); ">+</a><div id = "toggleText47" style = "display: none">
+ Context ( ) ; 
+ ~ Context ( ) ; 
+ std :: string token ; 
+ std :: istream * _pIn ; 
+ std :: vector &lt;std :: string &gt;_oneCharTokens = 
+ { <a id = "displayText" href = "javascript:toggle('toggleText48'); ">+</a><div id = "toggleText48" style = "display: none">
+ "\n" , "<" , ">" , "{" , "}" , "[" , "]" , "(" , ")" , ":" , ";" , " = " , " + " , " - " , "*" , "." , "," , "@" 
+  </div>} ; 
+ std :: vector &lt;std :: string &gt;_twoCharTokens = 
+ { <a id = "displayText" href = "javascript:toggle('toggleText49'); ">+</a><div id = "toggleText49" style = "display: none">
+ "<<" , ">>" , "::" , "++" , "--" , "==" , "+=" , "-=" , "*=" , "/=" 
+  </div>} ; 
+ int prevChar ; 
+ int currChar ; 
+ bool _doReturnComments ; 
+ bool inCSharpString = false ; 
+ size_t _lineCount ; 
+ ConsumeState * _pState ; 
+ ConsumeState * _pEatCppComment ; 
+ ConsumeState * _pEatCComment ; 
+ ConsumeState * _pEatWhitespace ; 
+ ConsumeState * _pEatPunctuator ; 
+ ConsumeState * _pEatAlphanum ; 
+ ConsumeState * _pEatSpecialCharacters ; 
+ ConsumeState * _pEatDQString ; 
+ ConsumeState * _pEatSQString ; 
+ ConsumeState * _pEatRawCppString ; 
+ ConsumeState * _pEatRawCSharpString ; 
+  </div>} ; 
+ 
+ /////////////////////////////////////////////////////////////////// 
+ // private ConsumeState worker class 
+ /*
+   *   Nota Bene:
+   *   - At exit the eatChars() member should return with
+   *     currChar set to the first non-state character.
+   *   - Each derived class must insure that this condition
+   *     is meet.
+   */ 
+ class ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText50'); ">+</a><div id = "toggleText50" style = "display: none">
+ friend class Toker ; 
+ public : 
+ using Token = std :: string ; 
+ ConsumeState ( ) ; 
+ ConsumeState ( const ConsumeState & ) = delete ; 
+ ConsumeState & operator = ( const ConsumeState & ) = delete ; 
+ virtual ~ ConsumeState ( ) ; 
+ void attach ( std :: istream * pIn ) ; 
+ virtual void eatChars ( ) = 0 ; 
+ void consumeChars ( ) { <a id = "displayText" href = "javascript:toggle('toggleText51'); ">+</a><div id = "toggleText51" style = "display: none">
+ _pContext - &gt;_pState - &gt;eatChars ( ) ; 
+ _pContext - &gt;_pState = nextState ( ) ; 
+  </div>} 
+ bool canRead ( ) { <a id = "displayText" href = "javascript:toggle('toggleText52'); ">+</a><div id = "toggleText52" style = "display: none">return _pContext - &gt;_pIn - &gt;good ( ) ;  </div>} 
+ std :: string getTok ( ) { <a id = "displayText" href = "javascript:toggle('toggleText53'); ">+</a><div id = "toggleText53" style = "display: none">return _pContext - &gt;token ;  </div>} 
+ bool hasTok ( ) { <a id = "displayText" href = "javascript:toggle('toggleText54'); ">+</a><div id = "toggleText54" style = "display: none">return _pContext - &gt;token . size ( ) &gt;0 ;  </div>} 
+ ConsumeState * nextState ( ) ; 
+ void returnComments ( bool doReturnComments = false ) ; 
+ size_t currentLineCount ( ) ; 
+ void setSpecialTokens ( const std :: string & commaSeparatedString ) ; 
+ void setContext ( Context * pContext ) ; 
+ protected : 
+ Context * _pContext ; 
+ bool collectChar ( ) ; 
+ bool isOneCharToken ( Token tok ) ; 
+ bool isTwoCharToken ( Token tok ) ; 
+ Token makeString ( int ch ) ; 
+  </div>} ; 
+  </div>} 
+ 
+ using namespace Scanner ; 
+ using Token = std :: string ; 
+ 
+ //----< used by Toker to provide Consumer with Context ptr >--------- 
+ 
+ void ConsumeState :: setContext ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText55'); ">+</a><div id = "toggleText55" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ //----< attach or re-attach to input stream >------------------------ 
+ 
+ void ConsumeState :: attach ( std :: istream * pIn ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText56'); ">+</a><div id = "toggleText56" style = "display: none">
+ _pContext - &gt;_pState = _pContext - &gt;_pEatWhitespace ; 
+ _pContext - &gt;_lineCount = 0 ; 
+ _pContext - &gt;_pIn = pIn ; 
+  </div>} 
+ //----< replace one and two char tokens >---------------------------- 
+ 
+ void ConsumeState :: setSpecialTokens ( const std :: string & commaSeparatedTokens ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText57'); ">+</a><div id = "toggleText57" style = "display: none">
+ std :: vector &lt;Token &gt;result = Utilities :: StringHelper :: split ( commaSeparatedTokens ) ; 
+ _pContext - &gt;_oneCharTokens . clear ( ) ; 
+ _pContext - &gt;_twoCharTokens . clear ( ) ; 
+ for ( std :: string item : result ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText58'); ">+</a><div id = "toggleText58" style = "display: none">
+ if ( item . size ( ) == 1 || item == "\n" ) 
+ _pContext - &gt;_oneCharTokens . push_back ( item ) ; 
+ if ( item . size ( ) &gt;= 2 ) 
+ _pContext - &gt;_twoCharTokens . push_back ( item ) ; 
+  </div>} 
+  </div>} 
+ //----< return number of newlines collected from stream >------------ 
+ 
+ size_t ConsumeState :: currentLineCount ( ) { <a id = "displayText" href = "javascript:toggle('toggleText59'); ">+</a><div id = "toggleText59" style = "display: none">return _pContext - &gt;_lineCount ;  </div>} 
+ 
+ //----< collect character from stream >------------------------------ 
+ 
+ bool ConsumeState :: collectChar ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText60'); ">+</a><div id = "toggleText60" style = "display: none">
+ if ( _pContext - &gt;_pIn - &gt;good ( ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText61'); ">+</a><div id = "toggleText61" style = "display: none">
+ _pContext - &gt;prevChar = _pContext - &gt;currChar ; 
+ _pContext - &gt;currChar = _pContext - &gt;_pIn - &gt;get ( ) ; 
+ if ( _pContext - &gt;currChar == '\n' ) 
+ ++ ( _pContext - &gt;_lineCount ) ; 
+ return true ; 
+  </div>} 
+ return false ; 
+  </div>} 
+ 
+ //----< logs to console if TEST_LOG is defined >--------------------- 
+ 
+ void testLog ( const std :: string & msg ) ; // forward declaration 
+ 
+ //----< turn on\off returning comments as tokens >------------------- 
+ 
+ void ConsumeState :: returnComments ( bool doReturnComments ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText62'); ">+</a><div id = "toggleText62" style = "display: none">
+ _pContext - &gt;_doReturnComments = doReturnComments ; 
+  </div>} 
+ //----< is tok one of the special one character tokens? >------------ 
+ 
+ bool ConsumeState :: isOneCharToken ( Token tok ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText63'); ">+</a><div id = "toggleText63" style = "display: none">
+ for ( size_t i = 0 ; i &lt;_pContext - &gt;_oneCharTokens . size ( ) ; ++ i ) 
+ if ( _pContext - &gt;_oneCharTokens [ i ] == tok ) 
+ return true ; 
+ return false ; 
+  </div>} 
+ //----< is tok one of the special two character tokens? >------------ 
+ 
+ bool ConsumeState :: isTwoCharToken ( Token tok ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText64'); ">+</a><div id = "toggleText64" style = "display: none">
+ for ( size_t i = 0 ; i &lt;_pContext - &gt;_twoCharTokens . size ( ) ; ++ i ) 
+ if ( _pContext - &gt;_twoCharTokens [ i ] == tok ) 
+ return true ; 
+ return false ; 
+  </div>} 
+ //----< make a string with this one integer >------------------------ 
+ 
+ ConsumeState :: Token ConsumeState :: makeString ( int ch ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText65'); ">+</a><div id = "toggleText65" style = "display: none">
+ Token temp ; 
+ return temp += ch ; 
+  </div>} 
+ //----< decide which state to use next >----------------------------- 
+ 
+ ConsumeState * ConsumeState :: nextState ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText66'); ">+</a><div id = "toggleText66" style = "display: none">
+ if ( ! ( _pContext - &gt;_pIn - &gt;good ( ) ) ) { <a id = "displayText" href = "javascript:toggle('toggleText67'); ">+</a><div id = "toggleText67" style = "display: none">
+ return nullptr ;  </div>} 
+ int chNext = _pContext - &gt;_pIn - &gt;peek ( ) ; 
+ if ( chNext == EOF ) { <a id = "displayText" href = "javascript:toggle('toggleText68'); ">+</a><div id = "toggleText68" style = "display: none">
+ _pContext - &gt;_pIn - &gt;clear ( ) ; // if peek() reads end of file character, EOF, then eofbit is set and _pIn->good() will return false.  clear() restores state to good 
+  </div>} 
+ // The following tests must come first 
+ if ( _pContext - &gt;currChar == '\"' && _pContext - &gt;prevChar != '\\' ) { <a id = "displayText" href = "javascript:toggle('toggleText69'); ">+</a><div id = "toggleText69" style = "display: none">
+ testLog ( "state: eatDQString" ) ; 
+ return _pContext - &gt;_pEatDQString ;  </div>} 
+ if ( _pContext - &gt;currChar == '\'' && _pContext - &gt;prevChar != '\\' ) { <a id = "displayText" href = "javascript:toggle('toggleText70'); ">+</a><div id = "toggleText70" style = "display: none">
+ testLog ( "state: eatSQString" ) ; 
+ return _pContext - &gt;_pEatSQString ;  </div>} 
+ if ( _pContext - &gt;currChar == '/' && chNext == '/' ) { <a id = "displayText" href = "javascript:toggle('toggleText71'); ">+</a><div id = "toggleText71" style = "display: none">
+ testLog ( "state: eatCppComment" ) ; 
+ return _pContext - &gt;_pEatCppComment ;  </div>} 
+ if ( _pContext - &gt;currChar == '/' && chNext == '*' ) { <a id = "displayText" href = "javascript:toggle('toggleText72'); ">+</a><div id = "toggleText72" style = "display: none">
+ testLog ( "state: eatCComment" ) ; 
+ return _pContext - &gt;_pEatCComment ;  </div>} 
+ if ( _pContext - &gt;currChar == 'R' && chNext == '\"' ) { <a id = "displayText" href = "javascript:toggle('toggleText73'); ">+</a><div id = "toggleText73" style = "display: none">
+ testLog ( "state: eatRawCppString" ) ; 
+ return _pContext - &gt;_pEatRawCppString ;  </div>} 
+ if ( _pContext - &gt;currChar == '@' && chNext == '\"' ) { <a id = "displayText" href = "javascript:toggle('toggleText74'); ">+</a><div id = "toggleText74" style = "display: none">
+ testLog ( "state: eatRawCSharpString" ) ; 
+ return _pContext - &gt;_pEatRawCSharpString ; 
+  </div>} // The following tests must come after those above 
+ if ( isOneCharToken ( makeString ( _pContext - &gt;currChar ) ) ) { <a id = "displayText" href = "javascript:toggle('toggleText75'); ">+</a><div id = "toggleText75" style = "display: none">
+ testLog ( "state: eatSpecialCharacters" ) ; 
+ return _pContext - &gt;_pEatSpecialCharacters ;  </div>} 
+ if ( std :: isspace ( _pContext - &gt;currChar ) && _pContext - &gt;currChar != '\n' ) { <a id = "displayText" href = "javascript:toggle('toggleText76'); ">+</a><div id = "toggleText76" style = "display: none">
+ testLog ( "state: eatWhitespace" ) ; 
+ return _pContext - &gt;_pEatWhitespace ;  </div>} 
+ if ( std :: isalnum ( _pContext - &gt;currChar ) || _pContext - &gt;currChar == '_' ) { <a id = "displayText" href = "javascript:toggle('toggleText77'); ">+</a><div id = "toggleText77" style = "display: none">
+ testLog ( "state: eatAlphanum" ) ; 
+ return _pContext - &gt;_pEatAlphanum ;  </div>} 
+ if ( ispunct ( _pContext - &gt;currChar ) ) { <a id = "displayText" href = "javascript:toggle('toggleText78'); ">+</a><div id = "toggleText78" style = "display: none">
+ testLog ( "state: eatPunctuator" ) ; 
+ return _pContext - &gt;_pEatPunctuator ;  </div>} 
+ if ( !_ pContext - &gt;_pIn - &gt;good ( ) ) { <a id = "displayText" href = "javascript:toggle('toggleText79'); ">+</a><div id = "toggleText79" style = "display: none">
+ testLog ( "state: eatWhitespace" ) ; 
+ return _pContext - &gt;_pEatWhitespace ; 
+  </div>} // If _pContext->currChar is not a state transition char then we go to eatPuctuator state 
+ return _pContext - &gt;_pEatPunctuator ; 
+  </div>} 
+ //----< class that consumes whitespace >----------------------------- 
+ 
+ class EatWhitespace : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText80'); ">+</a><div id = "toggleText80" style = "display: none">
+ public : 
+ EatWhitespace ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText81'); ">+</a><div id = "toggleText81" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText82'); ">+</a><div id = "toggleText82" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText83'); ">+</a><div id = "toggleText83" style = "display: none">
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( std :: isspace ( _pContext - &gt;currChar ) && _pContext - &gt;currChar != '\n' ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that consumes C++ comment >---------------------------- 
+ 
+ class EatCppComment : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText84'); ">+</a><div id = "toggleText84" style = "display: none">
+ public : 
+ EatCppComment ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText85'); ">+</a><div id = "toggleText85" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText86'); ">+</a><div id = "toggleText86" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText87'); ">+</a><div id = "toggleText87" style = "display: none">
+ if ( _pContext - &gt;_doReturnComments ) 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '\n' ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that consumes C comment >------------------------------ 
+ 
+ class EatCComment : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText88'); ">+</a><div id = "toggleText88" style = "display: none">
+ public : 
+ EatCComment ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText89'); ">+</a><div id = "toggleText89" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText90'); ">+</a><div id = "toggleText90" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText91'); ">+</a><div id = "toggleText91" style = "display: none">
+ if ( _pContext - &gt;_doReturnComments ) 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '*' || _pContext - &gt;_pIn - &gt;peek ( ) != '/' ) ; 
+ if ( _pContext - &gt;_doReturnComments ) 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) // get terminating '/' 
+ return ; 
+ if ( _pContext - &gt;_doReturnComments ) 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ collectChar ( ) ; // get first non-comment char 
+  </div>} 
+  </div>} ; 
+ //----< class that eats punctuators >-------------------------------- 
+ 
+ class EatPunctuator : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText92'); ">+</a><div id = "toggleText92" style = "display: none">
+ public : 
+ EatPunctuator ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText93'); ">+</a><div id = "toggleText93" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText94'); ">+</a><div id = "toggleText94" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ int chNext = _pContext - &gt;_pIn - &gt;peek ( ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText95'); ">+</a><div id = "toggleText95" style = "display: none">
+ if ( _pContext - &gt;currChar == '\"' && _pContext - &gt;prevChar != '\\' ) // start of double quoted string 
+ { <a id = "displayText" href = "javascript:toggle('toggleText96'); ">+</a><div id = "toggleText96" style = "display: none">
+ return ; 
+  </div>} 
+ if ( _pContext - &gt;currChar == '@' && chNext == '\"' ) // start of raw C# double quoted string 
+ { <a id = "displayText" href = "javascript:toggle('toggleText97'); ">+</a><div id = "toggleText97" style = "display: none">
+ return ; 
+  </div>} 
+ if ( _pContext - &gt;currChar == '\'' && _pContext - &gt;prevChar != '\\' ) // start of single quoted string 
+ { <a id = "displayText" href = "javascript:toggle('toggleText98'); ">+</a><div id = "toggleText98" style = "display: none">
+ return ; 
+  </div>} 
+ Token temp = makeString ( _pContext - &gt;currChar ) ; 
+ if ( isOneCharToken ( temp ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText99'); ">+</a><div id = "toggleText99" style = "display: none">
+ return ; 
+  </div>} 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( !_ pContext - &gt;_pIn - &gt;good ( ) ) // end of stream 
+ { <a id = "displayText" href = "javascript:toggle('toggleText100'); ">+</a><div id = "toggleText100" style = "display: none">
+ return ; 
+  </div>} 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( ispunct ( _pContext - &gt;currChar ) ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats alphanumeric characters >-------------------- 
+ /*
+ * treats underscore '_' as alphanumeric character
+ */ 
+ class EatAlphanum : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText101'); ">+</a><div id = "toggleText101" style = "display: none">
+ public : 
+ EatAlphanum ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText102'); ">+</a><div id = "toggleText102" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText103'); ">+</a><div id = "toggleText103" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ int chNext = _pContext - &gt;_pIn - &gt;peek ( ) ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText104'); ">+</a><div id = "toggleText104" style = "display: none">
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( isalnum ( _pContext - &gt;currChar ) || _pContext - &gt;currChar == '_' ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats one and two character tokens >--------------- 
+ 
+ class EatSpecialCharacters : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText105'); ">+</a><div id = "toggleText105" style = "display: none">
+ public : 
+ EatSpecialCharacters ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText106'); ">+</a><div id = "toggleText106" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText107'); ">+</a><div id = "toggleText107" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ Token temp = makeString ( _pContext - &gt;currChar ) += _pContext - &gt;_pIn - &gt;peek ( ) ; 
+ if ( isTwoCharToken ( temp ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText108'); ">+</a><div id = "toggleText108" style = "display: none">
+ collectChar ( ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+  </div>} 
+ collectChar ( ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats double quoted string >----------------------- 
+ 
+ bool isEscapted ( std :: string tok ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText109'); ">+</a><div id = "toggleText109" style = "display: none">
+ size_t backSlashCount = 0 ; 
+ for ( size_t i = tok . size ( ) - 1 ; i &gt;= 0 ; -- i ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText110'); ">+</a><div id = "toggleText110" style = "display: none">
+ if ( tok [ i ] == '\\' ) 
+ ++ backSlashCount ; 
+ else break ; 
+  </div>} 
+ return ( backSlashCount % 2 == 1 ) ; 
+  </div>} 
+ //----< class that eats double quoted string >----------------------- 
+ 
+ class EatDQString : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText111'); ">+</a><div id = "toggleText111" style = "display: none">
+ public : 
+ EatDQString ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText112'); ">+</a><div id = "toggleText112" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText113'); ">+</a><div id = "toggleText113" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do 
+ { <a id = "displayText" href = "javascript:toggle('toggleText114'); ">+</a><div id = "toggleText114" style = "display: none">
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '\"' || isEscapted ( _pContext - &gt;token ) ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ _pContext - &gt;inCSharpString = false ; 
+ collectChar ( ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats double quoted string >----------------------- 
+ 
+ class EatRawCppString : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText115'); ">+</a><div id = "toggleText115" style = "display: none">
+ public : 
+ EatRawCppString ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText116'); ">+</a><div id = "toggleText116" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText117'); ">+</a><div id = "toggleText117" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do 
+ { <a id = "displayText" href = "javascript:toggle('toggleText118'); ">+</a><div id = "toggleText118" style = "display: none">
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '\"' || _pContext - &gt;prevChar == 'R' ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ collectChar ( ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats double quoted string >----------------------- 
+ 
+ class EatRawCSharpString : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText119'); ">+</a><div id = "toggleText119" style = "display: none">
+ public : 
+ EatRawCSharpString ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText120'); ">+</a><div id = "toggleText120" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText121'); ">+</a><div id = "toggleText121" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do 
+ { <a id = "displayText" href = "javascript:toggle('toggleText122'); ">+</a><div id = "toggleText122" style = "display: none">
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '\"' || _pContext - &gt;prevChar == '@' ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ collectChar ( ) ; 
+  </div>} 
+  </div>} ; 
+ //----< class that eats single quoted string >----------------------- 
+ 
+ class EatSQString : public ConsumeState 
+ { <a id = "displayText" href = "javascript:toggle('toggleText123'); ">+</a><div id = "toggleText123" style = "display: none">
+ public : 
+ EatSQString ( Context * pContext ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText124'); ">+</a><div id = "toggleText124" style = "display: none">
+ _pContext = pContext ; 
+  </div>} 
+ virtual void eatChars ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText125'); ">+</a><div id = "toggleText125" style = "display: none">
+ _pContext - &gt;token . clear ( ) ; 
+ do 
+ { <a id = "displayText" href = "javascript:toggle('toggleText126'); ">+</a><div id = "toggleText126" style = "display: none">
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ if ( ! collectChar ( ) ) 
+ return ; 
+  </div>} while ( _pContext - &gt;currChar != '\'' || isEscapted ( _pContext - &gt;token ) ) ; 
+ _pContext - &gt;token += _pContext - &gt;currChar ; 
+ collectChar ( ) ; 
+  </div>} 
+  </div>} ; 
+ //----< construct shared data storage >------------------------------ 
+ 
+ Context :: Context ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText127'); ">+</a><div id = "toggleText127" style = "display: none">
+ _pEatAlphanum = new EatAlphanum ( this ) ; 
+ _pEatCComment = new EatCComment ( this ) ; 
+ _pEatCppComment = new EatCppComment ( this ) ; 
+ _pEatPunctuator = new EatPunctuator ( this ) ; 
+ _pEatWhitespace = new EatWhitespace ( this ) ; 
+ _pEatSpecialCharacters = new EatSpecialCharacters ( this ) ; 
+ _pEatDQString = new EatDQString ( this ) ; 
+ _pEatRawCppString = new EatRawCppString ( this ) ; 
+ _pEatRawCSharpString = new EatRawCSharpString ( this ) ; 
+ _pEatSQString = new EatSQString ( this ) ; 
+ _pState = _pEatWhitespace ; 
+ _lineCount = 0 ; 
+ _doReturnComments = false ; 
+  </div>} 
+ //----< return shared resources >------------------------------------ 
+ 
+ Context :: ~ Context ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText128'); ">+</a><div id = "toggleText128" style = "display: none">
+ delete _pEatAlphanum ; 
+ delete _pEatCComment ; 
+ delete _pEatCppComment ; 
+ delete _pEatPunctuator ; 
+ delete _pEatWhitespace ; 
+ delete _pEatSpecialCharacters ; 
+ delete _pEatDQString ; 
+ delete _pEatRawCppString ; 
+ delete _pEatRawCSharpString ; 
+ delete _pEatSQString ; 
+  </div>} 
+ //----< no longer has anything to do - will be removed >------------- 
+ 
+ ConsumeState :: ConsumeState ( ) { <a id = "displayText" href = "javascript:toggle('toggleText129'); ">+</a><div id = "toggleText129" style = "display: none"> </div>} 
+ 
+ //----< no longer has anything to do - will be removed >------------- 
+ 
+ ConsumeState :: ~ ConsumeState ( ) { <a id = "displayText" href = "javascript:toggle('toggleText130'); ">+</a><div id = "toggleText130" style = "display: none"> </div>} 
+ 
+ //----< construct toker starting in state EatWhitespace >------------ 
+ 
+ Toker :: Toker ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText131'); ">+</a><div id = "toggleText131" style = "display: none">
+ _pContext = new Context ( ) ; 
+ pConsumer = _pContext - &gt;_pEatWhitespace ; 
+ pConsumer - &gt;setContext ( _pContext ) ; 
+  </div>} 
+ 
+ //----< destructor deletes the current state >----------------------- 
+ /*
+ * deleting any state deletes them all since derived destructor
+ * implicitly invokes the base destructor
+ */ 
+ Toker :: ~ Toker ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText132'); ">+</a><div id = "toggleText132" style = "display: none">
+ delete _pContext ; 
+ _pContext = nullptr ; 
+  </div>} 
+ 
+ //----< attach tokenizer to stream >--------------------------------- 
+ /*
+ * stream can be either a std::fstream or std::stringstream
+ */ 
+ bool Toker :: attach ( std :: istream * pIn ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText133'); ">+</a><div id = "toggleText133" style = "display: none">
+ if ( pIn != nullptr && pIn - &gt;good ( ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText134'); ">+</a><div id = "toggleText134" style = "display: none">
+ pConsumer - &gt;attach ( pIn ) ; 
+ //_pContext->_pIn = pIn; 
+ return true ; 
+  </div>} 
+ return false ; 
+  </div>} 
+ //----< collect token generated by ConsumeState >-------------------- 
+ 
+ std :: string Toker :: getTok ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText135'); ">+</a><div id = "toggleText135" style = "display: none">
+ while ( true ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText136'); ">+</a><div id = "toggleText136" style = "display: none">
+ if ( ! pConsumer - &gt;canRead ( ) ) 
+ return "" ; 
+ pConsumer - &gt;consumeChars ( ) ; 
+ if ( pConsumer - &gt;hasTok ( ) ) 
+ break ; 
+  </div>} 
+ return pConsumer - &gt;getTok ( ) ; 
+  </div>} 
+ //----< has toker reached the end of its stream? >------------------- 
+ 
+ bool Toker :: canRead ( ) { <a id = "displayText" href = "javascript:toggle('toggleText137'); ">+</a><div id = "toggleText137" style = "display: none">return pConsumer - &gt;canRead ( ) ;  </div>} 
+ 
+ //----< start/stop returning comments as tokens >-------------------- 
+ 
+ void Toker :: returnComments ( bool doReturnComments ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText138'); ">+</a><div id = "toggleText138" style = "display: none">
+ pConsumer - &gt;returnComments ( doReturnComments ) ; 
+  </div>} 
+ //----< is this token a comment? >----------------------------------- 
+ 
+ bool Toker :: isComment ( const std :: string & tok ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText139'); ">+</a><div id = "toggleText139" style = "display: none">
+ if ( tok . find ( "//" ) &lt;tok . size ( ) || tok . find ( "/*" ) &lt;tok . size ( ) ) 
+ return true ; 
+ return false ; 
+  </div>} 
+ //----< return number of newlines pulled from stream >--------------- 
+ 
+ size_t Toker :: currentLineCount ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText140'); ">+</a><div id = "toggleText140" style = "display: none">
+ return pConsumer - &gt;currentLineCount ( ) ; 
+  </div>} 
+ //----< set one and two char tokens >-------------------------------- 
+ 
+ void Toker :: setSpecialTokens ( const std :: string & commaSeparatedTokens ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText141'); ">+</a><div id = "toggleText141" style = "display: none">
+ pConsumer - &gt;setSpecialTokens ( commaSeparatedTokens ) ; 
+  </div>} 
+ //----< debugging output to console if TEST_LOG is #defined >-------- 
+ 
+ void testLog ( const std :: string & msg ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText142'); ">+</a><div id = "toggleText142" style = "display: none">
+ # ifdef TEST_LOG 
+ std :: cout << "\n  " << msg ; 
+ # endif 
+  </div>} 
+ 
+ //----< test stub >-------------------------------------------------- 
+ 
+ using Helper = Utilities :: StringHelper ; 
+ using namespace Utilities ; 
+ 
+ # ifdef TEST_TOKENIZER 
+ 
+ # include &lt;fstream &gt;
+ # include &lt;exception &gt;
+ 
+ 
+ int main ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText143'); ">+</a><div id = "toggleText143" style = "display: none">
+ Helper :: Title ( "Testing Tokenizer" ) ; 
+ std :: string fileSpec = "../Tokenizer/Test.txt" ; 
+ try { <a id = "displayText" href = "javascript:toggle('toggleText144'); ">+</a><div id = "toggleText144" style = "display: none">
+ std :: ifstream in ( fileSpec ) ; 
+ if ( ! in . good ( ) ) { <a id = "displayText" href = "javascript:toggle('toggleText145'); ">+</a><div id = "toggleText145" style = "display: none">
+ std :: cout << "\n  can't open " << fileSpec << "\n\n" ; 
+ return 1 ;  </div>} 
+ { <a id = "displayText" href = "javascript:toggle('toggleText146'); ">+</a><div id = "toggleText146" style = "display: none">
+ Toker toker ; 
+ toker . returnComments ( ) ; 
+ toker . attach ( & in ) ; 
+ std :: cout << "\n  current line count = " << toker . currentLineCount ( ) ; 
+ do 
+ { <a id = "displayText" href = "javascript:toggle('toggleText147'); ">+</a><div id = "toggleText147" style = "display: none">
+ std :: string tok = toker . getTok ( ) ; 
+ if ( tok == "\n" ) 
+ tok = "newline" ; 
+ std :: cout << "\n -- " << tok ; 
+  </div>} while ( in . good ( ) ) ; 
+ std :: cout << "\n  current line count = " << toker . currentLineCount ( ) ; 
+  </div>} 
+ putline ( ) ; 
+ Helper :: title ( "Testing change of special characters" ) ; 
+ std :: string newSpecialChars = "., :, +, +=, \n { }" ; 
+ Toker toker ; 
+ toker . returnComments ( ) ; 
+ toker . setSpecialTokens ( newSpecialChars ) ; 
+ in . clear ( ) ; 
+ in . seekg ( std :: ios :: beg ) ; 
+ toker . attach ( & in ) ; 
+ std :: cout << "\n  new special tokens: " << newSpecialChars ; 
+ do { <a id = "displayText" href = "javascript:toggle('toggleText148'); ">+</a><div id = "toggleText148" style = "display: none">
+ std :: string tok = toker . getTok ( ) ; 
+ if ( tok == "\n" ) 
+ tok = "newline" ; 
+ std :: cout << "\n -- " << tok ; 
+  </div>} while ( in . good ( ) ) ; 
+ std :: cout << "\n  current line count = " << toker . currentLineCount ( ) << "\n" ; 
+ 
+  </div>} 
+ catch ( std :: logic_error & ex ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText149'); ">+</a><div id = "toggleText149" style = "display: none">
+ std :: cout << "\n  " << ex . what ( ) ; 
+  </div>} 
+ std :: cout << "\n\n" ; 
+ return 0 ; 
+  </div>} 
+ # endif 
+ </pre></body></html>

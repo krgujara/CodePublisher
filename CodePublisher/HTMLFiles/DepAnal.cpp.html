@@ -1,0 +1,150 @@
+<html><head><link rel = "stylesheet" type = "text/css" href = "../StylesAndScripts/style.css"><script type = "text/javascript" src = "../StylesAndScripts/script.js"></script></head><body><h3>C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.cpp</h3><hr/><div class = "indent"><h4>Dependencies:</h4><a href = "../HTMLFiles/DepAnal.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.h</a><br><a href = "../HTMLFiles/Tokenizer.cpp.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.cpp</a><br><a href = "../HTMLFiles/Tokenizer.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.h</a><br></div><hr/><pre>/////////////////////////////////////////////////////////////// 
+ // DepAnal.cpp - Creates dependency analysis from type table  //                                 // 
+ //                                                           // 
+ // Language:    Visual C++ 2015                              // 
+ // Platform:    Windows 10 Macbook                           // 
+ // Author:      Komal Gujarathi, Syracuse University         // 
+ //              (315) 744 6116, krgujara@syr.edu             // 
+ /////////////////////////////////////////////////////////////// 
+ 
+ # include "DepAnal.h" 
+ 
+ //----< helper: is text a substring of str? >-------------------- 
+ bool contains_str ( const std :: string & str , const std :: string & text ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText26'); ">+</a><div id = "toggleText26" style = "display: none">
+ if ( str . find ( text ) &lt;str . length ( ) ) 
+ return true ; 
+ return false ; 
+  </div>} 
+ 
+ //-------------<Tokenise the files to find if the type appears in aly of the files and checking it with all the types that are stored in typetable>------------ 
+ void DepAnal :: tokenizeForDependencies ( FileMap files , std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> typeTable ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText27'); ">+</a><div id = "toggleText27" style = "display: none">
+ std :: vector &lt;std :: string &gt;vec ; 
+ 
+ // Loop over all file patterns 
+ for ( auto item : files ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText28'); ">+</a><div id = "toggleText28" style = "display: none">
+ // Loop over all files 
+ for ( auto file : item . second ) { <a id = "displayText" href = "javascript:toggle('toggleText29'); ">+</a><div id = "toggleText29" style = "display: none">
+ std :: ifstream in ( file ) ; 
+ vec . clear ( ) ; 
+ 
+ if ( ! in . good ( ) ) { <a id = "displayText" href = "javascript:toggle('toggleText30'); ">+</a><div id = "toggleText30" style = "display: none">
+ continue ; 
+  </div>} 
+ 
+ Scanner :: Toker token ; 
+ token . returnComments ( false ) ; 
+ token . attach ( & in ) ; 
+ 
+ while ( in . good ( ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText31'); ">+</a><div id = "toggleText31" style = "display: none">
+ std :: string tok = token . getTok ( ) ; 
+ if ( tok == "\n" ) 
+ continue ; 
+ vec . push_back ( tok ) ; 
+  </div>} 
+ 
+ analyzeDependencies ( vec , file , typeTable ) ; 
+  </div>} 
+  </div>} 
+ 
+  </div>} 
+ 
+ //-----<Displays dependency analysis result>----------- 
+ void DepAnal :: displayDependencies ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText32'); ">+</a><div id = "toggleText32" style = "display: none">
+ std :: cout << "\n\n\n----Dependency Analysis has : " << depAnalStore . size ( ) << "Entries\n\n" << std :: endl ; 
+ 
+ 
+ for ( auto item : depAnalStore ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText33'); ">+</a><div id = "toggleText33" style = "display: none">
+ std :: cout << "\n" << item . first << "   DEPENDS ON   " ; 
+ for ( std :: set &lt;std :: string &gt;:: iterator it = item . second . begin ( ) ; it != item . second . end ( ) ; ++ it ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText34'); ">+</a><div id = "toggleText34" style = "display: none">
+ std :: cout << "\n" << * it ; 
+  </div>} 
+ 
+ std :: cout << "\n\n" ; 
+  </div>} 
+ 
+  </div>} 
+ 
+ //-------<Function to return the dependency analysis result>------------ 
+ std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> DepAnal :: getDependencies ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText35'); ">+</a><div id = "toggleText35" style = "display: none">
+ return depAnalStore ; 
+  </div>} 
+ 
+ //--------<Function to analyse dependencies>---------- 
+ void DepAnal :: analyzeDependencies ( std :: vector &lt;std :: string &gt;vec , std :: string file , 
+ std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> typetable ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText36'); ">+</a><div id = "toggleText36" style = "display: none">
+ //for all tokens in the file 
+ for ( std :: vector &lt;std :: string &gt;:: iterator it = vec . begin ( ) ; it != vec . end ( ) ; it ++ ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText37'); ">+</a><div id = "toggleText37" style = "display: none">
+ //found 
+ std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> :: iterator found = typetable . find ( * it ) ; 
+ if ( found != typetable . end ( ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText38'); ">+</a><div id = "toggleText38" style = "display: none">
+ //match found 
+ 
+ // File1 depends on File2 (File2 -primary, File1- secondary) 
+ for ( auto typeInfo : found - &gt;second ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText39'); ">+</a><div id = "toggleText39" style = "display: none">
+ //A file cannot be dependent on itself 
+ if ( typeInfo . _filename != file ) { <a id = "displayText" href = "javascript:toggle('toggleText40'); ">+</a><div id = "toggleText40" style = "display: none">
+ depAnalStore [ file ] . insert ( typeInfo . _filename ) ; 
+  </div>} 
+  </div>} 
+  </div>} 
+ 
+  </div>} 
+  </div>} 
+ 
+ 
+ # ifdef DEPANAL_TEST 
+ 
+ 
+ int main ( int argc , char * argv [ ] ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText41'); ">+</a><div id = "toggleText41" style = "display: none">
+ using namespace CodeAnalysis ; 
+ 
+ //starting to execute 
+ CodeAnalysisExecutive exec ; 
+ 
+ try { <a id = "displayText" href = "javascript:toggle('toggleText42'); ">+</a><div id = "toggleText42" style = "display: none">
+ bool succeeded = exec . ProcessCommandLine ( argc , argv ) ; 
+ if ( ! succeeded ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText43'); ">+</a><div id = "toggleText43" style = "display: none">
+ return 1 ; 
+  </div>} 
+ exec . getSourceFiles ( ) ; 
+ exec . processSourceCode ( true ) ; 
+ 
+ TypeTable ta ; 
+ ta . createTypeTable ( ) ; 
+ std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> typeTable = ta . getTypeTable ( ) ; 
+ DepAnal da ; 
+ //da.doDepAnal(); 
+ 
+ FileMap files = exec . getFileMap ( ) ; 
+ 
+ da . tokenizeForDependencies ( files , typeTable ) ; 
+ 
+ da . displayDependencies ( ) ; 
+ 
+ std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> dependencies = da . getDependencies ( ) ; 
+ 
+  </div>} 
+ catch ( std :: exception & except ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText44'); ">+</a><div id = "toggleText44" style = "display: none">
+ exec . flushLogger ( ) ; 
+ std :: cout << "\n\n  caught exception in Executive::main: " + std :: string ( except . what ( ) ) + "\n\n" ; 
+ exec . stopLogger ( ) ; 
+ return 1 ; 
+  </div>} 
+ return 0 ; 
+  </div>} 
+ # endif </pre></body></html>

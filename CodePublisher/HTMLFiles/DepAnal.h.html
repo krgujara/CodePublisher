@@ -1,0 +1,106 @@
+<html><head><link rel = "stylesheet" type = "text/css" href = "../StylesAndScripts/style.css"><script type = "text/javascript" src = "../StylesAndScripts/script.js"></script></head><body><h3>C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.h</h3><hr/><div class = "indent"><h4>Dependencies:</h4><a href = "../HTMLFiles/DepAnal.cpp.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\DepAnal\DepAnal.cpp</a><br><a href = "../HTMLFiles/Tokenizer.cpp.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.cpp</a><br><a href = "../HTMLFiles/Tokenizer.h.html"> C:\Users\Komal\Desktop\CodePublisher\CodePublisher\Req9TestFiles\Tokenizer\Tokenizer.h</a><br></div><hr/><pre># pragma once 
+ /////////////////////////////////////////////////////////////// 
+ // DepAnal.h - Creates Dependency Analysis                   //                                 // 
+ //                                                           // 
+ // Language:    Visual C++ 2015                              // 
+ // Platform:    Windows 10 Macbook                           // 
+ // Author:      Komal Gujarathi, Syracuse University         // 
+ //              (315) 744 6116, krgujara@syr.edu             // 
+ /////////////////////////////////////////////////////////////// 
+ 
+ 
+ /*
+Package Operations:
+===================
+Dependency Alalysis package takes the typetable as an input 
+and finds out the dependencies among the packages.
+Dependenecy Analysis holds the unordered map of  which stores the key value pair
+key indicating the File Name
+value is the Set of all the other files on wihch that particular files
+depend on
+
+Maintanence Information:
+========================
+
+Required files:
+---------------
+Parser/ActionsAndRules.h , Parser/ActionsAndRules.cpp
+AbstractSyntaxTree/AbstrSynTree.h , AbstractSyntaxTree/AbstrSynTree.cpp 
+Analyzer/Executive.h Analyzer/Executive.cpp
+TypeTable.h, TypeTable.cpp
+
+Build Process:
+--------------
+Using Visual Studio Command Prompt:
+
+Revision History:
+-----------------
+ver 1. created on 2-Mar-2017
+*/ 
+ 
+ # include "../Parser/ActionsAndRules.h" 
+ # include &lt;iostream &gt;
+ # include &lt;set &gt;
+ # include &lt;fstream &gt;
+ # include &lt;string &gt;
+ # include "../TypeTable/TypeTable.h" 
+ 
+ 
+ using namespace CodeAnalysis ; 
+ using Pattern = std :: string ; 
+ using Ext = std :: string ; 
+ using FileMap = std :: unordered_map &lt;Pattern , std :: vector &lt;std :: string >> ; 
+ using SPtr = std :: shared_ptr &lt;ASTNode * &gt;; 
+ 
+ 
+ //------<Class for finding dependcy analysis, basically a store which stores information about dependencies>--------- 
+ class DepAnal 
+ { <a id = "displayText" href = "javascript:toggle('toggleText1'); ">+</a><div id = "toggleText1" style = "display: none">
+ public : 
+ 
+ DepAnal ( ) ; 
+ void doDepAnal ( ) ; 
+ void tokenizeForDependencies ( FileMap files , std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> typeTable ) ; 
+ void analyzeDependencies ( std :: vector &lt;std :: string &gt;vec , std :: string file , std :: unordered_map &lt;Type , std :: vector &lt;TypeInfo >> typetable ) ; 
+ void displayDependencies ( ) ; 
+ std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> getDependencies ( ) ; 
+ private : 
+ void DFS ( ASTNode * pNode ) ; 
+ AbstrSynTree & ASTref_ ; 
+ ScopeStack &lt;ASTNode * &gt;scopeStack_ ; 
+ Scanner :: Toker & toker_ ; 
+ 
+ std :: unordered_map &lt;std :: string , std :: set &lt;std :: string >> depAnalStore ; 
+  </div>} ; 
+ 
+ //-----------<initializes the AST, Scopestack and Toker>-------------- 
+ inline DepAnal :: DepAnal ( ) : 
+ ASTref_ ( Repository :: getInstance ( ) - &gt;AST ( ) ) , 
+ scopeStack_ ( Repository :: getInstance ( ) - &gt;scopeStack ( ) ) , 
+ toker_ ( * ( Repository :: getInstance ( ) - &gt;Toker ( ) ) ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText2'); ">+</a><div id = "toggleText2" style = "display: none">
+  </div>} 
+ 
+ //--------<Recursive depth first search>------ 
+ inline void DepAnal :: DFS ( ASTNode * pNode ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText3'); ">+</a><div id = "toggleText3" style = "display: none">
+ static std :: string path = "" ; 
+ if ( pNode - &gt;path_ != path ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText4'); ">+</a><div id = "toggleText4" style = "display: none">
+ std :: cout << "\n    -- " << pNode - &gt;path_ << "\\" << pNode - &gt;package_ ; 
+ path = pNode - &gt;path_ ; 
+  </div>} 
+ std :: cout << "\n  " << pNode - &gt;name_ ; 
+ std :: cout << ", " << pNode - &gt;type_ ; 
+ for ( auto pChild : pNode - &gt;children_ ) 
+ DFS ( pChild ) ; 
+  </div>} 
+ 
+ //------<Function which does type analysis>-------- 
+ inline void DepAnal :: doDepAnal ( ) 
+ { <a id = "displayText" href = "javascript:toggle('toggleText5'); ">+</a><div id = "toggleText5" style = "display: none">
+ std :: cout << "\n  starting type analysis:\n" ; 
+ ASTNode * pRoot = ASTref_ . root ( ) ; 
+ DFS ( pRoot ) ; 
+  </div>} 
+ </pre></body></html>
