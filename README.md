@@ -10,7 +10,7 @@ There are several things you need to know in order to complete this project:
 
 Each file to be published is a C++ source file. Our publisher will generate, for each of these, an HTML file, with most of the contents drawn from the code file.
 The pages we will generate have only static content, with the exception of some embedded JavaScript and styling, so we won't need a web server.
-We will need to preserve the white space structure of the displayed source code. That can be done embedding all the code between the tags /<pre> and /</pre> or by using the CSS white-space property with value "pre" to style a div with all the code in its contents.
+We will need to preserve the white space structure of the displayed source code. That can be done embedding all the code between the tags pre and /pre or by using the CSS white-space property with value "pre" to style a div with all the code in its contents.
 Any markup characters in the code text will have to be escaped, e.g., replace < with &lt; and > with &gt;.
 File dependencies are displayed in the web page with embedded links, which are implemented in HTML5 with anchor elements:
 <a href="[url of referenced html page]">source code file name</a>
